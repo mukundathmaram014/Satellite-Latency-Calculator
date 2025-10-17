@@ -323,7 +323,7 @@ int main(){
     std::string TLE_line1 {};
     std::string TLE_line2 {};
 
-    std::cout << "Enter NORAD data for satellite (3 lines, (satellite name on first line and norad data on next two)): " << std::endl;
+    std::cout << "Enter TLE data for satellite (3 lines, (satellite name on first line and TLE data on next two)): " << std::endl;
     std::getline(std::cin, satellite_name);
     std::getline(std::cin, TLE_line1);
     std::getline(std::cin, TLE_line2);
