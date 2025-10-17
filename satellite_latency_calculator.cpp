@@ -51,16 +51,21 @@ OrbitalParams parseTLEline2(const std::string &TLE_line2);
 double convertRadians(const double degrees);
 double convertDegrees(const double radians);
 double parseTLESci(const std::string &num);
-void display_data(const std::string &name, const SatelliteMetadata &metadata, const OrbitalParams &params, const double longitude, const double latitude);
+void display_data(const std::string &name, const SatelliteMetadata &metadata, const OrbitalParams &params, const double longitude, 
+    const double latitude);
 double calculate_true_anomaly(const double mean_motion, const double mean_anomaly, const int epoch_year, const double epoch_day, const double eccentricity);
 double calculate_eccentric_anomaly(const double mean_motion_final, const double eccentricity);
-std::vector<std::vector<double>> calculate_satellite_position_vector(double inclination, double right_ascension, double argument_of_perigee, double mean_motion, double true_anomaly, const double eccentricity);
-std::vector<std::vector<double>> multiply_two_matrices(std::vector<std::vector<double>> matrix1, std::vector<std::vector<double>> matrix2);
-std::vector<std::vector<double>> calculate_ground_position_vector(double latitude, double longitude);
-double calculate_latency(std::vector<std::vector<double>> satellite_position_vector, std::vector<std::vector<double>> ground_position_vector);
-
+std::vector<std::vector<double>> calculate_satellite_position_vector(const double inclination, const double right_ascension, 
+    const double argument_of_perigee, const double mean_motion, const double true_anomaly, const double eccentricity);
+std::vector<std::vector<double>> multiply_two_matrices(const std::vector<std::vector<double>> &matrix1, const std::vector<std::vector<double>> &matrix2);
+std::vector<std::vector<double>> calculate_ground_position_vector(const double latitude, const double longitude);
+double calculate_latency_distance(const std::vector<std::vector<double>> &satellite_position_vector, const std::vector<std::vector<double>> &ground_position_vector);
+void display_results(const double true_anomaly, const double latency_distance, const double latency);
 
 SatelliteMetadata parseTLEline1(const std::string &TLE_line1){
+    /**
+     * Parses data from first line of TLE
+     */
     SatelliteMetadata data;
     data.satellite_catalog_number = std::stoi(TLE_line1.substr(2, 5));
     data.classification = TLE_line1[7];
@@ -78,6 +83,9 @@ SatelliteMetadata parseTLEline1(const std::string &TLE_line1){
 }
 
 OrbitalParams parseTLEline2(const std::string &TLE_line2){
+    /**
+     * Parses data from second line of TLE
+     */
     OrbitalParams params;
     params.satellite_catalog_number = std::stoi(TLE_line2.substr(2, 5));
     params.inclination = std::stod(TLE_line2.substr(8, 8));
@@ -93,14 +101,21 @@ OrbitalParams parseTLEline2(const std::string &TLE_line2){
 }
 
 double convertRadians(const double degrees){
+    /*Converts given angle in degrees to radians*/
     return degrees * (PI/180);
 }
 
 double convertDegrees(const double radians){
+    /*Converts given angle in radians to degrees*/
     return radians * (180/PI);
 }
 
 double parseTLESci(const std::string &num){
+    /**
+     * Handles specific formatting instructions for certain TLE
+     * data such as assuming a decimal point in the beginning and
+     * +/- signs indicating scientific notation.
+     */
     std::string parsed_num = num;
     size_t insert_index = (num[0] == '+' || num[0] == '-') ? 1 : 0;
     if (num[1] != '.'){
@@ -116,6 +131,9 @@ double parseTLESci(const std::string &num){
 }
 
 void display_data(const std::string &name, const SatelliteMetadata &metadata, const OrbitalParams &params, const double longitude, const double latitude){
+    /**
+     * Displays inputted satelite and ground station data.
+     */
     std::cout << std::endl << "---------------------------------------" << std::endl;
     std::cout << "Satellite name: " << name << std::endl << std::endl;
     std::cout << "Inclination: " << params.inclination << std::endl;
@@ -132,6 +150,9 @@ void display_data(const std::string &name, const SatelliteMetadata &metadata, co
 }
 
 double calculate_true_anomaly(const double mean_motion, const double mean_anomaly, const int epoch_year, const double epoch_day, const double eccentricity){
+    /**
+     * Calculates the satellites true anomaly angle.
+     */
     double mean_motion_seconds = mean_motion / 86400; //  convert to revs/s
     int full_year = (epoch_year > 56)  ?  (epoch_year + 1900)  : (epoch_year + 2000);
     double epoch_satellite_time = ((full_year - 1970) * 31536000) + (epoch_day * 86400);
@@ -144,7 +165,7 @@ double calculate_true_anomaly(const double mean_motion, const double mean_anomal
     double mean_motion_final = std::fmod( mean_anomaly + (mean_motion_seconds * delta_t), 360);
 
     double eccentric_anomaly = calculate_eccentric_anomaly(mean_motion_final, eccentricity);
-    
+
     double true_anomaly_rad = std::acos((eccentricity - std::cos(convertRadians(eccentric_anomaly)))/(eccentricity * std::cos(convertRadians(eccentric_anomaly)) - 1));
     double true_anomaly_deg = convertDegrees(true_anomaly_rad);
 
@@ -153,7 +174,8 @@ double calculate_true_anomaly(const double mean_motion, const double mean_anomal
 
 double calculate_eccentric_anomaly(const double mean_motion_final, const double eccentricity){
     /**
-     * Solves equation M = E - esin(E) for E using Newton-Rhapson method
+     * Calculates the eccentric anomaly by Solving equation M = E - esin(E) for E using 
+     * the Newton-Rhapson method.
      */
 
     double E = mean_motion_final; // initial guess
@@ -170,7 +192,11 @@ double calculate_eccentric_anomaly(const double mean_motion_final, const double 
     return E;
 }
 
-std::vector<std::vector<double>> calculate_satellite_position_vector(double inclination, double right_ascension, double argument_of_perigee, double mean_motion, double true_anomaly, double eccentricity){
+std::vector<std::vector<double>> calculate_satellite_position_vector(const double inclination, const double right_ascension, 
+    const double argument_of_perigee, const double mean_motion, const double true_anomaly, const double eccentricity){
+    /**
+     * Calculates position vector in meters from center of earth to satellite's current position.
+     */
     double inclination_rad = convertRadians(inclination);
     double right_ascension_rad = convertRadians(right_ascension);
     double argument_of_perigee_rad = convertRadians(argument_of_perigee);
@@ -213,7 +239,10 @@ std::vector<std::vector<double>> calculate_satellite_position_vector(double incl
 
 }
 
-std::vector<std::vector<double>> multiply_two_matrices(std::vector<std::vector<double>> matrix1, std::vector<std::vector<double>> matrix2){
+std::vector<std::vector<double>> multiply_two_matrices(const std::vector<std::vector<double>> &matrix1, const std::vector<std::vector<double>> &matrix2){
+    /**
+     * Multiplies two matrices which are modelled as 2 dimensional vectors.
+     */
     size_t matrix1_rows = matrix1.size();
     size_t matrix1_cols = matrix1[0].size();
 
@@ -237,7 +266,10 @@ std::vector<std::vector<double>> multiply_two_matrices(std::vector<std::vector<d
     return result;
 }
 
-std::vector<std::vector<double>> calculate_ground_position_vector(double latitude, double longitude){
+std::vector<std::vector<double>> calculate_ground_position_vector(const double latitude, const double longitude){
+    /**
+     * Calculates position vector from center of earth to given latitude and longitude.
+     */
     double agi = 120.7; // From Astronomers Almanac, recorded on Jan 21, 2019 8:00:16.7646 UTC
     double agi_epoch = ((2019 - 1970) * 31536000) + (20 * 86400) + (8 * 3600) + 16.7646;
     std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
@@ -258,7 +290,12 @@ std::vector<std::vector<double>> calculate_ground_position_vector(double latitud
     return ground_position_vector;
 }
 
-double calculate_latency(std::vector<std::vector<double>> satellite_position_vector, std::vector<std::vector<double>> ground_position_vector){
+double calculate_latency_distance(const std::vector<std::vector<double>> &satellite_position_vector, 
+    const std::vector<std::vector<double>> &ground_position_vector){
+    /**
+     * Calculates the distance between a ground station and a satellite given the position vectors 
+     * to both from the center of the earth.
+     */
     std::vector<std::vector<double>> latency_vector = {
         {satellite_position_vector[0][0] - ground_position_vector[0][0], satellite_position_vector[0][1] - ground_position_vector[0][1], satellite_position_vector[0][2] - ground_position_vector[0][2]}
     };
@@ -267,7 +304,10 @@ double calculate_latency(std::vector<std::vector<double>> satellite_position_vec
     return latency_distance;
 }
 
-void display_results(double true_anomaly, double latency_distance, double latency){
+void display_results(const double true_anomaly, const double latency_distance, const double latency){
+    /**
+     * Displays final calculated true_anomaly, latency distance, and latency.
+     */
     std::cout << std::endl << "---------------------------------------" << std::endl;
     std::cout << "Calculated Orbital Data: " << std::endl << std::endl;
     std::cout << "True Anomaly: " << true_anomaly << "°" << std::endl;
@@ -315,7 +355,7 @@ int main(){
          double true_anomaly = calculate_true_anomaly(params.mean_motion,params.mean_anomaly, metadata.epoch_year, metadata.epoch_day, params.eccentricity);
          std::vector<std::vector<double>> satellite_position_vector = calculate_satellite_position_vector(params.inclination, params.right_ascension, params.argument_of_perigee, params.mean_motion, true_anomaly, params.eccentricity);
          std::vector<std::vector<double>> ground_position_vector = calculate_ground_position_vector(latitude, longitude);
-         double latency_distance = calculate_latency(satellite_position_vector, ground_position_vector);
+         double latency_distance = calculate_latency_distance(satellite_position_vector, ground_position_vector);
          double latency = ((latency_distance * 2) / SPEED_OF_LIGHT) * 1000; // in ms
 
          display_results(true_anomaly, latency_distance, latency);
@@ -323,10 +363,5 @@ int main(){
     } else {
         std::cout << "Goodbye" << std::endl;
     }
-
-
-
-
-
     return 0;
 }
