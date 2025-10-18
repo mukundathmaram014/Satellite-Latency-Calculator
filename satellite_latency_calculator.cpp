@@ -323,6 +323,7 @@ int main(){
     std::string TLE_line1 {};
     std::string TLE_line2 {};
 
+    std::cin.clear();
     std::cout << "Enter TLE data for satellite (3 lines, (satellite name on first line and TLE data on next two)): " << std::endl;
     std::getline(std::cin, satellite_name);
     std::getline(std::cin, TLE_line1);
@@ -334,6 +335,7 @@ int main(){
     double latitude {};
     double longitude {};
 
+    std::cin.clear();
     std::cout << "Enter your current latitude in degrees: " << std::endl;
     std::cin >> latitude;
     std::cout << "Enter your current longitude in degrees: " << std::endl;
